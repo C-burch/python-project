@@ -1,0 +1,149 @@
+import random
+
+# Define the Player class
+class Player:
+    def __init__(self, name, character_class):
+        self.name = name
+        self.character_class = character_class
+        self.level = 1
+        self.hp = 100
+        self.attack_power = 10
+        self.defense = 5
+        self.inventory = []
+        self.xp = 0
+        self.max_hp = self.hp
+        self.potions = 2  # Starting potions
+    
+    def attack(self, enemy):
+        damage = self.attack_power - enemy.defense
+        if damage < 0:
+            damage = 0
+        print(f"{self.name} attacks {enemy.name} for {damage} damage!")
+        enemy.hp -= damage
+        return damage
+    
+    def heal(self):
+        if self.potions > 0:
+            heal_amount = 20
+            self.hp = min(self.max_hp, self.hp + heal_amount)
+            self.potions -= 1
+            print(f"{self.name} uses a potion and heals for {heal_amount} HP. Remaining potions: {self.potions}.")
+        else:
+            print(f"{self.name} has no potions left!")
+    
+    def gain_xp(self, xp_amount):
+        self.xp += xp_amount
+        print(f"{self.name} gained {xp_amount} XP!")
+        if self.xp >= 100:
+            self.level_up()
+    
+    def level_up(self):
+        self.level += 1
+        self.xp = 0
+        self.attack_power += 5
+        self.defense += 2
+        self.max_hp += 20
+        self.hp = self.max_hp
+        print(f"{self.name} leveled up! Now at level {self.level}.")
+    
+    def is_alive(self):
+        return self.hp > 0
+
+# Define the Enemy class
+class Enemy:
+    def __init__(self, name, level):
+        self.name = name
+        self.level = level
+        self.hp = 50 + level * 10
+        self.attack_power = 10 + level * 2
+        self.defense = 5 + level
+        self.xp_reward = 20 + level * 5
+
+    def attack(self, player):
+        damage = self.attack_power - player.defense
+        if damage < 0:
+            damage = 0
+        print(f"{self.name} attacks {player.name} for {damage} damage!")
+        player.hp -= damage
+
+    def is_alive(self):
+        return self.hp > 0
+
+# Define the Game class
+class Game:
+    def __init__(self):
+        self.player = None
+        self.enemies = []
+        self.is_game_over = False
+    
+    def create_player(self):
+        name = input("Enter your character's name: ")
+        character_class = input("Choose your character class (Warrior, Mage, Archer): ").capitalize()
+        self.player = Player(name, character_class)
+    
+    def create_enemy(self):
+        enemy_names = ["Goblin", "Orc", "Troll", "Dragon"]
+        enemy_name = random.choice(enemy_names)
+        enemy_level = random.randint(self.player.level, self.player.level + 2)
+        enemy = Enemy(enemy_name, enemy_level)
+        return enemy
+    
+    def show_status(self):
+        print(f"\n{self.player.name} - Level {self.player.level} | HP: {self.player.hp}/{self.player.max_hp} | Potions: {self.player.potions} | XP: {self.player.xp}")
+    
+    def explore(self):
+        print("\nYou venture into the dungeon...")
+        enemy = self.create_enemy()
+        self.enemies.append(enemy)
+        print(f"A wild {enemy.name} (Level {enemy.level}) appears!")
+        self.fight(enemy)
+    
+    def fight(self, enemy):
+        while self.player.is_alive() and enemy.is_alive():
+            self.show_status()
+            print("\nWhat will you do?")
+            print("1. Attack")
+            print("2. Heal")
+            action = input("Choose an action (1 or 2): ")
+            
+            if action == '1':
+                self.player.attack(enemy)
+            elif action == '2':
+                self.player.heal()
+            else:
+                print("Invalid choice. You lose your turn!")
+            
+            if enemy.is_alive():
+                enemy.attack(self.player)
+        
+        if self.player.is_alive():
+            print(f"\nYou defeated {enemy.name}!")
+            self.player.gain_xp(enemy.xp_reward)
+        else:
+            self.is_game_over = True
+            print(f"{self.player.name} has been defeated!")
+    
+    def game_loop(self):
+        while not self.is_game_over:
+            print("\nWhat would you like to do?")
+            print("1. Explore the dungeon")
+            print("2. Quit the game")
+            choice = input("Choose an action (1 or 2): ")
+
+            if choice == '1':
+                self.explore()
+            elif choice == '2':
+                print("Thanks for playing!")
+                self.is_game_over = True
+            else:
+                print("Invalid choice. Please choose again.")
+
+# Main code to run the game
+def main():
+    print("Welcome to the Dungeon RPG Game!")
+    game = Game()
+    game.create_player()
+    game.game_loop()
+
+if __name__ == "__main__":
+    main()

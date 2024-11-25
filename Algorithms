@@ -1,0 +1,112 @@
+import heapq
+
+# --- Sorting Algorithms ---
+
+# QuickSort Algorithm
+def quicksort(arr):
+    if len(arr) <= 1:
+        return arr
+    pivot = arr[len(arr) // 2]
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quicksort(left) + middle + quicksort(right)
+
+# MergeSort Algorithm
+def mergesort(arr):
+    if len(arr) <= 1:
+        return arr
+    mid = len(arr) // 2
+    left = mergesort(arr[:mid])
+    right = mergesort(arr[mid:])
+    return merge(left, right)
+
+def merge(left, right):
+    result = []
+    i = j = 0
+    while i < len(left) and j < len(right):
+        if left[i] < right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+
+# --- Searching Algorithm ---
+
+# Binary Search Algorithm
+def binary_search(arr, target):
+    low = 0
+    high = len(arr) - 1
+    while low <= high:
+        mid = (low + high) // 2
+        if arr[mid] == target:
+            return mid
+        elif arr[mid] < target:
+            low = mid + 1
+        else:
+            high = mid - 1
+    return -1  # Target not found
+
+# --- Dynamic Programming Algorithm ---
+
+# Fibonacci Sequence using Dynamic Programming
+def fibonacci(n):
+    fib = [0, 1]
+    for i in range(2, n + 1):
+        fib.append(fib[i - 1] + fib[i - 2])
+    return fib[n]
+
+# --- Graph Algorithm ---
+
+# Dijkstra's Algorithm for shortest path
+def dijkstra(graph, start):
+    # Min-heap priority queue for the smallest distance
+    pq = [(0, start)]
+    distances = {start: 0}
+    while pq:
+        current_distance, current_vertex = heapq.heappop(pq)
+        
+        if current_distance > distances.get(current_vertex, float('inf')):
+            continue
+        
+        for neighbor, weight in graph.get(current_vertex, []):
+            distance = current_distance + weight
+            if distance < distances.get(neighbor, float('inf')):
+                distances[neighbor] = distance
+                heapq.heappush(pq, (distance, neighbor))
+    
+    return distances
+
+# --- Main Execution ---
+
+if __name__ == "__main__":
+    # Testing Sorting Algorithms
+    arr = [10, 7, 8, 9, 1, 5]
+    print("Original Array:", arr)
+    print("QuickSort Result:", quicksort(arr))
+    print("MergeSort Result:", mergesort(arr))
+    
+    # Testing Searching Algorithm
+    sorted_arr = sorted(arr)
+    print("Sorted Array for Binary Search:", sorted_arr)
+    target = 9
+    result = binary_search(sorted_arr, target)
+    print(f"Binary Search Result: Target {target} at index {result}")
+    
+    # Testing Dynamic Programming Algorithm
+    n = 10
+    print(f"Fibonacci of {n}:", fibonacci(n))
+    
+    # Testing Graph Algorithm
+    graph = {
+        'A': [('B', 1), ('C', 4)],
+        'B': [('A', 1), ('C', 2), ('D', 5)],
+        'C': [('A', 4), ('B', 2), ('D', 1)],
+        'D': [('B', 5), ('C', 1)],
+    }
+    start_node = 'A'
+    print(f"Shortest paths from {start_node}:", dijkstra(graph, start_node))

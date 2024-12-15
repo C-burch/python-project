@@ -1,0 +1,118 @@
+import time
+import pandas as pd
+from binance.client import Client
+from binance.enums import *
+from binance.websockets import BinanceSocketManager
+import matplotlib.pyplot as plt
+import threading
+
+# Binance API credentials
+API_KEY = 'API Key Goes Here'
+API_SECRET = 'API Secret PW goes here'
+
+# Create Binance client
+client = Client(API_KEY, API_SECRET)
+
+# Set trading symbol (e.g., BTCUSDT for Bitcoin/US Dollar trading pair)
+TRADING_PAIR = 'BTCUSDT'
+
+# Global variables
+price_data = []
+sma_data = []
+current_price = 0.0
+
+# Function to fetch historical data
+def get_historical_data(symbol, interval='1h', lookback=100):
+    klines = client.get_historical_klines(symbol, interval, f"{lookback} hours ago UTC")
+    df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
+    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+    df.set_index('timestamp', inplace=True)
+    df = df[['close']].astype(float)
+    return df
+
+# Function to calculate moving average
+def calculate_moving_average(df, window=20):
+    df['SMA'] = df['close'].rolling(window=window).mean()
+    return df
+
+# Function to place a buy order
+def place_buy_order(symbol, quantity):
+    order = client.order_market_buy(
+        symbol=symbol,
+        quantity=quantity
+    )
+    return order
+
+# Function to place a sell order
+def place_sell_order(symbol, quantity):
+    order = client.order_market_sell(
+        symbol=symbol,
+        quantity=quantity
+    )
+    return order
+
+# Function to visualize the data and moving average
+def plot_data(df):
+    plt.figure(figsize=(10,6))
+    plt.plot(df.index, df['close'], label='Close Price', color='blue')
+    plt.plot(df.index, df['SMA'], label='Simple Moving Average', color='red')
+    plt.title(f'{TRADING_PAIR} Price and Moving Average')
+    plt.legend()
+    plt.show()
+
+# Function to handle WebSocket data
+def handle_socket_message(msg):
+    global current_price, price_data, sma_data
+
+    if msg['e'] == 'trade':
+        current_price = float(msg['p'])
+        print(f"Real-time Price: {current_price}")
+
+        # Store real-time data
+        price_data.append(current_price)
+
+        # Calculate the Simple Moving Average on the fly
+        if len(price_data) >= 20:
+            sma_data = pd.Series(price_data).rolling(window=20).mean().tolist()
+            sma_value = sma_data[-1]
+
+            # Print real-time SMA value
+            print(f"Real-time SMA: {sma_value}")
+
+            # Place buy/sell order based on SMA strategy
+            if current_price > sma_value:
+                print("Price above SMA, placing buy order.")
+                balance = client.get_asset_balance(asset='USDT')
+                usdt_balance = float(balance['free'])
+                quantity = round(usdt_balance / current_price, 2)
+                place_buy_order(TRADING_PAIR, quantity)
+
+            elif current_price < sma_value:
+                print("Price below SMA, placing sell order.")
+                balance = client.get_asset_balance(asset='BTC')  # Adjust for crypto you're holding
+                btc_balance = float(balance['free'])
+                quantity = round(btc_balance, 2)
+                place_sell_order(TRADING_PAIR, quantity)
+
+        # Keep only the last 100 price data points
+        if len(price_data) > 100:
+            price_data = price_data[-100:]
+
+# Function to start WebSocket
+def start_socket():
+    bm = BinanceSocketManager(client)
+    conn_key = bm.start_trade_socket(TRADING_PAIR, handle_socket_message)
+    bm.start()
+
+# Main function
+def main():
+    # Fetch historical data for initial analysis
+    df = get_historical_data(TRADING_PAIR)
+    df = calculate_moving_average(df)
+
+    # Visualize the initial data and SMA
+    plot_data(df)
+
+    # Start WebSocket for real-time price data
+    socket_thread = threading.Thread(target=start_socket)
+    socket_thread
